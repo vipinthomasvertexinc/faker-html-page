@@ -78,46 +78,52 @@
         };
 
         // Define the function globally
-        window.generateFakerData = function () {
-            const functionName = document.getElementById('fakerFunction').value.trim();
-            const argsString = document.getElementById('fakerArguments').value.trim();
-            const outputElement = document.getElementById('output');
-            const errorElement = document.getElementById('error');
+	window.generateFakerData = function () {
+	    const functionName = document.getElementById('fakerFunction').value.trim();
+	    const argsString = document.getElementById('fakerArguments').value.trim();
+	    const outputElement = document.getElementById('output');
+	    const errorElement = document.getElementById('error');
 
-            outputElement.value = '';
-            errorElement.textContent = '';
-            errorElement.style.display = 'none';
+	    outputElement.value = '';
+	    errorElement.textContent = '';
+	    errorElement.style.display = 'none';
 
-            try {
-                if (!functionName) {
-                    throw new Error("Function name cannot be empty.");
+	    try {
+		if (!functionName) {
+		    throw new Error("Function name cannot be empty.");
+		}
+
+		const parts = functionName.split('.');
+		let fakerFunction = faker;
+
+		parts.forEach(part => {
+		    if (fakerFunction[part]) {
+			fakerFunction = fakerFunction[part];
+		    } else {
+			throw new Error(`Function '${part}' not found in faker.`);
+		    }
+		});
+
+		if (typeof fakerFunction !== 'function') {
+		    throw new Error(`'${functionName}' is not a valid function.`);
+		}
+
+		const args = argsString ? parseArguments(argsString) : [];
+		let result;
+
+		// Check if the function is related to phone number generation
+                if (functionName === 'phone.number') {
+            	    result = faker.phone.number('###-###-####'); // Use custom format without extension
+                } else {
+                    result = fakerFunction(...args);
                 }
-
-                const parts = functionName.split('.');
-                let fakerFunction = faker;
-
-                parts.forEach(part => {
-                    if (fakerFunction[part]) {
-                        fakerFunction = fakerFunction[part];
-                    } else {
-                        throw new Error(`Function '${part}' not found in faker.`);
-                    }
-                });
-
-                if (typeof fakerFunction !== 'function') {
-                    throw new Error(`'${functionName}' is not a valid function.`);
-                }
-
-                const args = argsString ? parseArguments(argsString) : [];
-                const result = fakerFunction(...args);
-                outputElement.value = result;
-            } catch (error) {
-                console.error('Error generating data:', error);
-                errorElement.textContent = `Error: ${error.message}`;
-                errorElement.style.display = 'block';
-            }
-        };
-
+		outputElement.value = result;
+	    } catch (error) {
+		console.error('Error generating data:', error);
+		errorElement.textContent = `Error: ${error.message}`;
+		errorElement.style.display = 'block';
+	    }
+	};
         window.onload = function () {
             populateDropdown();
         };
