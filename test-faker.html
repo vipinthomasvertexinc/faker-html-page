@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faker.js Function Tester</title>
+    <script type="module">
+        import { faker } from 'https://esm.sh/@faker-js/faker';
+
+        // Helper function to traverse the Faker object and gather all functions
+        function getFakerFunctions(fakerObject, prefix = '', visited = new Set()) {
+            const functions = [];
+
+            if (visited.has(fakerObject)) {
+                return functions;
+            }
+            visited.add(fakerObject);
+
+            for (const key in fakerObject) {
+                if (typeof fakerObject[key] === 'object' && fakerObject[key] !== null && !visited.has(fakerObject[key])) {
+                    functions.push(...getFakerFunctions(fakerObject[key], `${prefix}${key}.`, visited));
+                } else if (typeof fakerObject[key] === 'function') {
+                    // Manually add functions known to accept arguments
+                    const functionsWithArgs = [
+                        'datatype.number',
+                        'datatype.float',
+                        'random.arrayElement',
+                        'date.between',
+                        'date.past',
+                        'date.future',
+                        'finance.amount',
+                        'internet.password',
+                        'lorem.words',
+                        'lorem.sentences',
+                        'lorem.paragraphs',
+                        'address.zipCodeByState',
+                        'internet.email'
+                    ];
+                    const functionName = `${prefix}${key}`;
+                    const requiresArgs = functionsWithArgs.includes(functionName);
+                    functions.push({
+                        name: functionName,
+                        requiresArgs: requiresArgs
+                    });
+                }
+            }
+            return functions;
+        }
+
+        // Populate the dropdown with all Faker functions
+        window.populateDropdown = function () {
+            const dropdown = document.getElementById('fakerFunctionDropdown');
+            const functions = getFakerFunctions(faker);
+
+            functions.forEach(func => {
+                const div = document.createElement('div');
+                div.textContent = func.name;
+                div.dataset.args = func.requiresArgs ? 'true' : 'false'; // Store if arguments are required
+                div.onclick = () => selectFunction(func.name, func.requiresArgs);
+                dropdown.appendChild(div);
+            });
+        };
+
+        // Populate the faker function text box when a dropdown option is selected
+        window.selectFunction = function (functionName, requiresArgs) {
+            const functionInputElement = document.getElementById('fakerFunction');
+            const argsInputElement = document.getElementById('argsContainer');
+            
+            functionInputElement.value = functionName;
+            document.getElementById('fakerFunctionDropdown').classList.remove('show');
+
+            // Show or hide the arguments input based on whether the function requires arguments
+            if (requiresArgs) {
+                argsInputElement.style.display = 'block';
+            } else {
+                argsInputElement.style.display = 'none';
+            }
+        };
+
+        // Define the function globally
+        window.generateFakerData = function () {
+            const functionName = document.getElementById('fakerFunction').value.trim();
+            const argsString = document.getElementById('fakerArguments').value.trim();
+            const outputElement = document.getElementById('output');
+            const errorElement = document.getElementById('error');
+
+            outputElement.value = '';
+            errorElement.textContent = '';
+            errorElement.style.display = 'none';
+
+            try {
+                if (!functionName) {
+                    throw new Error("Function name cannot be empty.");
+                }
+
+                const parts = functionName.split('.');
+                let fakerFunction = faker;
+
+                parts.forEach(part => {
+                    if (fakerFunction[part]) {
+                        fakerFunction = fakerFunction[part];
+                    } else {
+                        throw new Error(`Function '${part}' not found in faker.`);
+                    }
+                });
+
+                if (typeof fakerFunction !== 'function') {
+                    throw new Error(`'${functionName}' is not a valid function.`);
+                }
+
+                const args = argsString ? parseArguments(argsString) : [];
+                const result = fakerFunction(...args);
+                outputElement.value = result;
+            } catch (error) {
+                console.error('Error generating data:', error);
+                errorElement.textContent = `Error: ${error.message}`;
+                errorElement.style.display = 'block';
+            }
+        };
+
+        window.onload = function () {
+            populateDropdown();
+        };
+
+        function parseArguments(argsString) {
+            try {
+                return eval(`[${argsString}]`);
+            } catch (e) {
+                throw new Error('Invalid arguments format. Please use valid JSON syntax.');
+            }
+        }
+
+        window.filterFunctions = function () {
+            const input = document.getElementById('fakerFunction');
+            const filter = input.value.toLowerCase();
+            const dropdown = document.getElementById('fakerFunctionDropdown');
+            const divs = dropdown.getElementsByTagName('div');
+
+            dropdown.classList.add('show');
+
+            for (let i = 0; i < divs.length; i++) {
+                const txtValue = divs[i].textContent || divs[i].innerText;
+                if (txtValue.toLowerCase().indexOf(filter) > -1) {
+                    divs[i].style.display = '';
+                } else {
+                    divs[i].style.display = 'none';
+                }
+            }
+        };
+    </script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #007BFF;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="text"], select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .dropdown {
+            display: none;
+            position: absolute;
+            background-color: white;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            width: 100%;
+            z-index: 1;
+        }
+
+        .dropdown div {
+            padding: 8px;
+            cursor: pointer;
+        }
+
+        .dropdown div:hover {
+            background-color: #f1f1f1;
+        }
+
+        .dropdown.show {
+            display: block;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .output-container {
+            margin-top: 20px;
+        }
+        .output-container input {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            background-color: #f8f9fa;
+        }
+        .error-message {
+            color: #D8000C;
+            background-color: #FFBABA;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-weight: bold;
+            display: none;
+        }
+        .args-container {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Faker.js Function Tester</h1>
+    
+    <div class="container">
+        <div style="position:relative;">
+            <label for="fakerFunction">Enter or Search Faker Function:</label>
+            <input type="text" id="fakerFunction" placeholder="e.g., person.fullName, internet.email" onkeyup="filterFunctions()">
+            <div id="fakerFunctionDropdown" class="dropdown">
+                <!-- The options will be dynamically populated -->
+            </div>
+        </div>
+        <div id="argsContainer" class="args-container">
+            <label for="fakerArguments">Enter Function Arguments (optional):</label>
+            <input type="text" id="fakerArguments" placeholder='e.g., {"min": 1000000000, "max": 9999999999}'>
+        </div>
+        <button onclick="generateFakerData()">Generate</button>
+        
+        <div class="output-container">
+            <label for="output">Generated Output:</label>
+            <input type="text" id="output" readonly>
+        </div>
+
+        <div id="error" class="error-message"></div>
+    </div>
+
+</body>
+</html>
