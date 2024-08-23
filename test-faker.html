@@ -5,9 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Faker.js Function Tester</title>
     <script type="module">
-        import { faker } from 'https://esm.sh/@faker-js/faker';
+        import { faker } from 'https://esm.sh/@faker-js/faker/locale/en_US';
 
-        // Helper function to traverse the Faker object and gather all functions
+        // Mapping function names to relevant argument examples
+	const argumentExamples = {
+	    // Date and Time Functions
+	    'date.past': '{"years": 5, "refDate": "2023-01-01"}', // Example: 5 years in the past from January 1, 2023
+	    'date.between': '{"from": "2022-01-01", "to": "2022-12-31"}', // Example: Between two specific dates
+	    'date.future': '{"years": 2, "refDate": "2023-01-01"}', // Example: 2 years in the future from January 1, 2023
+	    'date.recent': '{"days": 30}', // Example: Within the last 30 days
+
+	    // Number Generation
+	    'datatype.number': '{"min": 1, "max": 100}', // Example: Random number between 1 and 100
+	    'datatype.float': '{"min": 1.5, "max": 10.5, "precision": 0.1}', // Example: Random float between 1.5 and 10.5 with a precision of 0.1
+
+	    // Random Helpers
+	    'random.arrayElement': '["apple", "banana", "cherry"]', // Example: Select a random element from an array
+	    'random.objectElement': '{"a": "apple", "b": "banana", "c": "cherry"}', // Example: Select a random value from an object
+
+	    // Finance Functions
+	    'finance.amount': '{"min": 100, "max": 1000, "dec": 2, "symbol": "$"}', // Example: Random financial amount between $100.00 and $1000.00
+
+	    // Internet and Web Functions
+	    'internet.email': '"firstName", "lastName", "provider"', // Example: Generate email using firstName, lastName, and provider
+	    'internet.url': '"https://www.example.com"', // Example: Custom URL base
+
+	    // Address and Location Functions
+	    'location.zipCodeByState': '"CA"', // Example: Generate a ZIP code specific to California
+	    'address.latitude': '{"min": -90, "max": 90}', // Example: Generate latitude within a specific range
+	    'address.longitude': '{"min": -180, "max": 180}', // Example: Generate longitude within a specific range
+
+	    // Name Functions
+	    'name.firstName': '"gender"', // Example: Generate a first name based on gender
+	    'name.lastName': '"gender"', // Example: Generate a last name based on gender
+	    'name.findName': '"firstName", "lastName", "gender"', // Example: Generate a full name using firstName, lastName, and gender
+
+	    // Commerce Functions
+	    'commerce.price': '{"min": 10, "max": 100, "dec": 2, "symbol": "$"}', // Example: Random price between $10.00 and $100.00
+	    'commerce.productName': '""', // No arguments required, but here for completeness
+
+	    // Image Functions
+	    'image.avatar': '""', // No arguments required, but here for completeness
+	    'image.imageUrl': '{"width": 640, "height": 480, "category": "nature"}', // Example: Generate a URL for a nature image of specific size
+
+	    // Phone Functions
+	    'phone.number': '"###-###-####"', // Example: Custom phone number format
+
+	    // Lorem (Text) Functions
+	    'lorem.words': '{"num": 5}', // Example: Generate 5 random words
+	    'lorem.sentences': '{"num": 3}', // Example: Generate 3 random sentences
+	    'lorem.paragraphs': '{"num": 2}', // Example: Generate 2 random paragraphs
+
+	    // Company Functions
+	    'company.companyName': '""', // No arguments required, but here for completeness
+	    'company.catchPhrase': '""', // No arguments required, but here for completeness
+
+	    // System Functions
+	    'system.fileName': '{"ext": "txt"}', // Example: Generate a random filename with a .txt extension
+	    'system.commonFileType': '""', // No arguments required, but here for completeness
+	    'system.mimeType': '""', // No arguments required, but here for completeness
+
+	    // String Functions
+	    'string.alpha': '{"length": 10}', // Example: Generate a random alphabetic string of length 10
+	    'string.numeric': '{"length": 8}', // Example: Generate a random numeric string of length 8
+	    'string.alphanumeric': '{"length": 12}', // Example: Generate a random alphanumeric string of length 12
+
+	    // Helpers Functions
+	    'helpers.slugify': '"Lorem Ipsum Dolor Sit Amet"', // Example: Slugify a string
+	    'helpers.replaceSymbolWithNumber': '"***-##"', // Example: Replace symbols in a string with random numbers
+	    'helpers.shuffle': '["a", "b", "c", "d"]', // Example: Shuffle an array
+	};
+        // Populate the dropdown with all Faker functions
+        window.populateDropdown = function () {
+            const dropdown = document.getElementById('fakerFunctionDropdown');
+            const functions = getFakerFunctions(faker); // Using default faker instance
+
+            functions.forEach(func => {
+                const div = document.createElement('div');
+                div.textContent = func.name;
+                div.dataset.args = func.requiresArgs ? 'true' : 'false'; // Store if arguments are required
+                div.onclick = () => selectFunction(func.name, func.requiresArgs);
+                dropdown.appendChild(div);
+            });
+        };
+
+        // Helper function to gather all Faker functions
         function getFakerFunctions(fakerObject, prefix = '', visited = new Set()) {
             const functions = [];
 
@@ -20,24 +102,8 @@
                 if (typeof fakerObject[key] === 'object' && fakerObject[key] !== null && !visited.has(fakerObject[key])) {
                     functions.push(...getFakerFunctions(fakerObject[key], `${prefix}${key}.`, visited));
                 } else if (typeof fakerObject[key] === 'function') {
-                    // Manually add functions known to accept arguments
-                    const functionsWithArgs = [
-                        'datatype.number',
-                        'datatype.float',
-                        'random.arrayElement',
-                        'date.between',
-                        'date.past',
-                        'date.future',
-                        'finance.amount',
-                        'internet.password',
-                        'lorem.words',
-                        'lorem.sentences',
-                        'lorem.paragraphs',
-                        'address.zipCodeByState',
-                        'internet.email'
-                    ];
                     const functionName = `${prefix}${key}`;
-                    const requiresArgs = functionsWithArgs.includes(functionName);
+                    const requiresArgs = argumentExamples.hasOwnProperty(functionName);
                     functions.push({
                         name: functionName,
                         requiresArgs: requiresArgs
@@ -47,24 +113,11 @@
             return functions;
         }
 
-        // Populate the dropdown with all Faker functions
-        window.populateDropdown = function () {
-            const dropdown = document.getElementById('fakerFunctionDropdown');
-            const functions = getFakerFunctions(faker);
-
-            functions.forEach(func => {
-                const div = document.createElement('div');
-                div.textContent = func.name;
-                div.dataset.args = func.requiresArgs ? 'true' : 'false'; // Store if arguments are required
-                div.onclick = () => selectFunction(func.name, func.requiresArgs);
-                dropdown.appendChild(div);
-            });
-        };
-
         // Populate the faker function text box when a dropdown option is selected
         window.selectFunction = function (functionName, requiresArgs) {
             const functionInputElement = document.getElementById('fakerFunction');
             const argsInputElement = document.getElementById('argsContainer');
+            const argsField = document.getElementById('fakerArguments');
             
             functionInputElement.value = functionName;
             document.getElementById('fakerFunctionDropdown').classList.remove('show');
@@ -72,58 +125,53 @@
             // Show or hide the arguments input based on whether the function requires arguments
             if (requiresArgs) {
                 argsInputElement.style.display = 'block';
+                argsField.placeholder = argumentExamples[functionName] || 'Enter arguments here';
             } else {
                 argsInputElement.style.display = 'none';
             }
         };
 
-        // Define the function globally
-	window.generateFakerData = function () {
-	    const functionName = document.getElementById('fakerFunction').value.trim();
-	    const argsString = document.getElementById('fakerArguments').value.trim();
-	    const outputElement = document.getElementById('output');
-	    const errorElement = document.getElementById('error');
+        // Generate Faker data
+        window.generateFakerData = function () {
+            const functionName = document.getElementById('fakerFunction').value.trim();
+            const argsString = document.getElementById('fakerArguments').value.trim();
+            const outputElement = document.getElementById('output');
+            const errorElement = document.getElementById('error');
 
-	    outputElement.value = '';
-	    errorElement.textContent = '';
-	    errorElement.style.display = 'none';
+            outputElement.value = '';
+            errorElement.textContent = '';
+            errorElement.style.display = 'none';
 
-	    try {
-		if (!functionName) {
-		    throw new Error("Function name cannot be empty.");
-		}
-
-		const parts = functionName.split('.');
-		let fakerFunction = faker;
-
-		parts.forEach(part => {
-		    if (fakerFunction[part]) {
-			fakerFunction = fakerFunction[part];
-		    } else {
-			throw new Error(`Function '${part}' not found in faker.`);
-		    }
-		});
-
-		if (typeof fakerFunction !== 'function') {
-		    throw new Error(`'${functionName}' is not a valid function.`);
-		}
-
-		const args = argsString ? parseArguments(argsString) : [];
-		let result;
-
-		// Check if the function is related to phone number generation
-                if (functionName === 'phone.number') {
-            	    result = faker.phone.number('###-###-####'); // Use custom format without extension
-                } else {
-                    result = fakerFunction(...args);
+            try {
+                if (!functionName) {
+                    throw new Error("Function name cannot be empty.");
                 }
-		outputElement.value = result;
-	    } catch (error) {
-		console.error('Error generating data:', error);
-		errorElement.textContent = `Error: ${error.message}`;
-		errorElement.style.display = 'block';
-	    }
-	};
+
+                const parts = functionName.split('.');
+                let fakerFunction = faker; // Use default faker instance
+
+                parts.forEach(part => {
+                    if (typeof fakerFunction[part] === 'object' || typeof fakerFunction[part] === 'function') {
+                        fakerFunction = fakerFunction[part];
+                    } else {
+                        throw new Error(`Function '${part}' not found in faker.`);
+                    }
+                });
+
+                if (typeof fakerFunction !== 'function') {
+                    throw new Error(`'${functionName}' is not a valid function.`);
+                }
+
+                const args = argsString ? parseArguments(argsString) : [];
+                const result = fakerFunction(...args);
+                outputElement.value = result;
+            } catch (error) {
+                console.error('Error generating data:', error);
+                errorElement.textContent = `Error: ${error.message}`;
+                errorElement.style.display = 'block';
+            }
+        };
+
         window.onload = function () {
             populateDropdown();
         };
@@ -152,6 +200,10 @@
                     divs[i].style.display = 'none';
                 }
             }
+
+            const argsInputElement = document.getElementById('argsContainer');
+
+            argsInputElement.style.display = 'block';
         };
     </script>
     <style>
@@ -261,7 +313,7 @@
         </div>
         <div id="argsContainer" class="args-container">
             <label for="fakerArguments">Enter Function Arguments (optional):</label>
-            <input type="text" id="fakerArguments" placeholder='e.g., {"min": 1000000000, "max": 9999999999}'>
+            <input type="text" id="fakerArguments" placeholder='Enter arguments here'>
         </div>
         <button onclick="generateFakerData()">Generate</button>
         
